@@ -1,0 +1,16 @@
++628123456789 | PT Telekomunikasi Selular (TELKOMSEL) | mobile
++628111111111 | PT Telekomunikasi Selular (TELKOMSEL) | mobile
++628222222222 | None | None
++628333333333 | PT XLSmart Telecom Sejahtera Tbk (XLSmart) | mobile
+Status: NOMOR VIRTUAL / VOIP | None | None
+users.db |  | None
++628222222222 |  | special_services
++628123456789 | PT Telekomunikasi Selular (TELKOMSEL) | mobile
++6281271048762 | PT Telekomunikasi Selular (TELKOMSEL) | mobile
++628123456789 | PT Telekomunikasi Selular (TELKOMSEL) | mobile
++628111111111 | PT Telekomunikasi Selular (TELKOMSEL) | mobile
++628222222222 | None | None
++628111111111 | PT Telekomunikasi Selular (TELKOMSEL) | mobile
++628222222222 | None | None
++6281271048762 | PT Telekomunikasi Selular (TELKOMSEL) | mobile
++6281271048762 | PT Telekomunikasi Selular (TELKOMSEL) | mobile
