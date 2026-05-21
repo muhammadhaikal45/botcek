@@ -38,7 +38,7 @@ os.makedirs("backups", exist_ok=True)
 # =========================
 # CONFIG
 # =========================
-TOKEN = os.getenv("8752615272:AAGS7COBor0kpMrcHX_LPZoUYImEJwuFiU4")
+TOKEN = os.getenv("8752615272:AAFqin2Im_Fy773873FAoVExJIxYfR6nueA")
 API_KEY = os.getenv("d9e9eea76cc77356954de5ffbc40086a")
 
 ADMINS = [5666003349]
