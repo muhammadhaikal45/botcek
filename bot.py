@@ -18,22 +18,34 @@ import sqlite3
 import asyncio
 import time
 import shutil
+import os
+import logging
 
 from datetime import datetime, timedelta
 
 # =========================
+# LOGGING
+# =========================
+logging.basicConfig(level=logging.INFO)
+
+# =========================
+# AUTO CREATE FOLDER
+# =========================
+os.makedirs("logs", exist_ok=True)
+os.makedirs("exports", exist_ok=True)
+os.makedirs("backups", exist_ok=True)
+
+# =========================
 # CONFIG
 # =========================
-
-TOKEN = "8752615272:AAGS7COBor0kpMrcHX_LPZoUYImEJwuFiU4"
-API_KEY = "d9e9eea76cc77356954de5ffbc40086a"
+TOKEN = os.getenv("8752615272:AAGS7COBor0kpMrcHX_LPZoUYImEJwuFiU4")
+API_KEY = os.getenv("d9e9eea76cc77356954de5ffbc40086a")
 
 ADMINS = [5666003349]
 
 # =========================
 # DATABASE
 # =========================
-
 conn = sqlite3.connect(
     "users.db",
     check_same_thread=False
@@ -41,7 +53,7 @@ conn = sqlite3.connect(
 
 c = conn.cursor()
 
-c.execute('''
+c.execute("""
 CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY,
     username TEXT,
@@ -49,23 +61,20 @@ CREATE TABLE IF NOT EXISTS users (
     premium_expired TEXT,
     last_reset TEXT
 )
-''')
+""")
 
 conn.commit()
 
 # =========================
 # COOLDOWN
 # =========================
-
 cooldown = {}
 
 # =========================
 # FUNCTIONS
 # =========================
-
 def is_admin(user_id):
     return user_id in ADMINS
-
 
 def add_user(user_id, username):
 
@@ -87,10 +96,8 @@ def add_user(user_id, username):
                 username,
                 last_reset
             )
-
             VALUES (?, ?, ?)
             """,
-
             (
                 user_id,
                 username,
@@ -99,7 +106,6 @@ def add_user(user_id, username):
         )
 
         conn.commit()
-
 
 def is_premium(user_id):
 
@@ -127,7 +133,6 @@ def is_premium(user_id):
 
     return expired >= datetime.now()
 
-
 def get_limit(user_id):
 
     c.execute(
@@ -146,7 +151,6 @@ def get_limit(user_id):
 
     return 0
 
-
 def kurangi_limit(user_id):
 
     c.execute(
@@ -159,7 +163,6 @@ def kurangi_limit(user_id):
     )
 
     conn.commit()
-
 
 def reset_limit(user_id):
 
@@ -195,7 +198,6 @@ def reset_limit(user_id):
 # =========================
 # BACKUP DATABASE
 # =========================
-
 def backup_database():
 
     try:
@@ -217,7 +219,6 @@ def backup_database():
 # =========================
 # START
 # =========================
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = update.effective_user
@@ -260,9 +261,31 @@ Multi cek:
     )
 
 # =========================
+# PROFILE
+# =========================
+async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    user_id = update.effective_user.id
+
+    limit_user = get_limit(user_id)
+
+    premium = is_premium(user_id)
+
+    status = "PREMIUM ⭐" if premium else "FREE 👤"
+
+    teks = f"""
+👤 ID: {user_id}
+
+⭐ STATUS: {status}
+
+📊 LIMIT HARIAN: {limit_user}
+"""
+
+    await update.message.reply_text(teks)
+
+# =========================
 # BUTTON
 # =========================
-
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
@@ -284,7 +307,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 # CEK NOMOR
 # =========================
-
 async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = update.effective_user
@@ -296,10 +318,9 @@ async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     # ANTI SPAM
     # =========================
-
     if user_id in cooldown:
 
-        if time.time() - cooldown[user_id] < 5:
+        if time.time() - cooldown[user_id] < 10:
 
             await update.message.reply_text(
                 "🚫 Jangan spam"
@@ -312,13 +333,11 @@ async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     # RESET LIMIT
     # =========================
-
     reset_limit(user_id)
 
     # =========================
     # LIMIT USER GRATIS
     # =========================
-
     if not is_premium(user_id):
 
         limit_user = get_limit(user_id)
@@ -333,15 +352,30 @@ async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     daftar_nomor = update.message.text.splitlines()
 
+    # =========================
+    # LIMIT MULTI CHECK
+    # =========================
+    if len(daftar_nomor) > 20:
+
+        await update.message.reply_text(
+            "❌ Maksimal 20 nomor"
+        )
+
+        return
+
     jumlah = len(daftar_nomor)
 
     loading = await update.message.reply_text(
-        f"⏳ Tunggu sebentar...\n\nBot sedang mengecek {jumlah} nomor..."
+        f"⏳ Sedang mengecek {jumlah} nomor..."
     )
 
     hasil_semua = ""
 
     for nomor in daftar_nomor:
+
+        # VALIDASI NOMOR
+        if not nomor.startswith("+"):
+            continue
 
         url = f"http://apilayer.net/api/validate?access_key={API_KEY}&number={nomor}"
 
@@ -376,25 +410,25 @@ async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 score += 50
 
             if score >= 70:
-
                 status = "🔴 RISIKO TINGGI"
 
             elif score >= 40:
-
                 status = "🟡 RISIKO SEDANG"
 
             else:
-
                 status = "🟢 RISIKO RENDAH"
 
             hasil = f"""
 📱 NOMOR: {nomor}
 
 🌍 NEGARA: {country}
+
 📡 OPERATOR: {carrier}
+
 🧠 JENIS: {line_type}
 
 {status}
+
 📊 SCORE: {score}%
 """
 
@@ -405,11 +439,9 @@ async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if line_type:
 
                     if "voip" in line_type.lower():
-
                         hasil += "\n☎️ VOIP / VIRTUAL"
 
                     else:
-
                         hasil += "\n📲 NOMOR NORMAL"
 
             else:
@@ -421,7 +453,6 @@ async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
             hasil_semua += hasil
 
             # SAVE LOG
-
             with open(
                 f"logs/{user_id}.txt",
                 "a"
@@ -431,14 +462,13 @@ async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"{nomor} | {carrier} | {line_type}\n"
                 )
 
-        except Exception as e:
+        except:
 
-            hasil_semua += f"\nError: {e}\n"
+            hasil_semua += "\n❌ Gagal cek nomor\n"
 
     # =========================
     # KURANGI LIMIT
     # =========================
-
     if not is_premium(user_id):
 
         kurangi_limit(user_id)
@@ -446,16 +476,15 @@ async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     # HAPUS LOADING
     # =========================
-
     try:
         await loading.delete()
+
     except:
         pass
 
     # =========================
     # KIRIM HASIL
     # =========================
-
     msg = await update.message.reply_text(
         hasil_semua
     )
@@ -463,7 +492,6 @@ async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     # EXPORT TXT PREMIUM
     # =========================
-
     if is_premium(user_id):
 
         with open(
@@ -483,18 +511,17 @@ async def cek_nomor(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     # AUTO DELETE
     # =========================
-
     await asyncio.sleep(30)
 
     try:
         await msg.delete()
+
     except:
         pass
 
 # =========================
 # ADD PREMIUM
 # =========================
-
 async def addpremium(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not is_admin(update.effective_user.id):
@@ -512,7 +539,6 @@ async def addpremium(update: Update, context: ContextTypes.DEFAULT_TYPE):
             SET premium_expired=?
             WHERE user_id=?
             """,
-
             (
                 expired.strftime("%Y-%m-%d"),
                 user_id
@@ -534,7 +560,6 @@ async def addpremium(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 # STATS
 # =========================
-
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not is_admin(update.effective_user.id):
@@ -553,44 +578,8 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(teks)
 
 # =========================
-# BROADCAST
-# =========================
-
-async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    if not is_admin(update.effective_user.id):
-        return
-
-    pesan = " ".join(context.args)
-
-    c.execute("SELECT user_id FROM users")
-
-    users = c.fetchall()
-
-    sukses = 0
-
-    for user in users:
-
-        try:
-
-            await context.bot.send_message(
-                user[0],
-                pesan
-            )
-
-            sukses += 1
-
-        except:
-            pass
-
-    await update.message.reply_text(
-        f"✅ Broadcast terkirim ke {sukses} user"
-    )
-
-# =========================
 # BACKUP
 # =========================
-
 async def backup(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not is_admin(update.effective_user.id):
@@ -603,18 +592,30 @@ async def backup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # =========================
+# ERROR HANDLER
+# =========================
+async def error_handler(update, context):
+
+    print(f"ERROR: {context.error}")
+
+# =========================
 # RUN BOT
 # =========================
-
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
+
+app.add_handler(CommandHandler("profile", profile))
+
 app.add_handler(CommandHandler("stats", stats))
+
 app.add_handler(CommandHandler("backup", backup))
-app.add_handler(CommandHandler("broadcast", broadcast))
+
 app.add_handler(CommandHandler("addpremium", addpremium))
 
-app.add_handler(CallbackQueryHandler(button))
+app.add_handler(
+    CallbackQueryHandler(button)
+)
 
 app.add_handler(
     MessageHandler(
@@ -622,6 +623,8 @@ app.add_handler(
         cek_nomor
     )
 )
+
+app.add_error_handler(error_handler)
 
 print("Bot berjalan...")
 
